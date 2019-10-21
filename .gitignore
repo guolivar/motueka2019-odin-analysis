@@ -26,3 +26,10 @@ vignettes/*.pdf
 rsconnect/
 .Rproj.user
 secret_hologram.txt
+*.pdf
+*.png
+*.mpeg
+*.tgz
+*.nc
+*.RData
+*.Rdata
