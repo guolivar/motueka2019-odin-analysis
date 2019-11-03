@@ -44,6 +44,10 @@ data_path <- "./"
 secret_hologram <- read_delim("./secret_hologram.txt", 
                               "\t", escape_double = FALSE, trim_ws = TRUE)
 
+# Get the list of locations
+odin_locations <- read_delim(paste0(data_path,"odin_locations.txt"),
+                             "\t", escape_double = FALSE, trim_ws = TRUE)
+
 # Get the tag list
 base_url <- "https://dashboard.hologram.io/api/1/devices/tags?"
 built_url <- paste0(base_url,
@@ -84,21 +88,27 @@ for (i in (1:ndevices)){
 # UTC time start ... 24 hours ago
 x_now <- Sys.time()
 # This is to make a run in the past
-#x_now <- as.POSIXct("2019-07-24 18:00:00")
+x_now <- as.POSIXct("2019-09-01 23:00:00")
 print(x_now)
 x_start <- x_now - 24 * 3600
-t_start <- floor(as.numeric(x_now) - 24 * 3600)
+x_start <- as.POSIXct("2019-04-29 00:00:00")
+t_start <- floor(as.numeric(x_start))
 # UTC time end ... now
 t_end <- floor(as.numeric(x_now))
 # Set the averaging interval
-time_avg <- '15 min'
+time_avg <- '1 hour'
 
 # This is for the averagin
-x_start <- x_now - 25 * 3600
+x_start <- x_start - 25 * 3600
 
 print("Getting data")
 # Need to go device by device for query stability
 for (c_deviceid in all_devices$id){
+  proceed <- substr(subset(all_devices,id == c_deviceid)$name,6,9) %in% odin_locations$ID
+  if (!proceed){
+    next
+  }
+  print(subset(all_devices,id==c_deviceid)$name)
   base_url <- "https://dashboard.hologram.io/api/1/csr/rdm?"
   print("First 1000 fetch")
   built_url <- paste0(base_url,
@@ -110,21 +120,32 @@ for (c_deviceid in all_devices$id){
                       "orgid=",secret_hologram$orgid,"&",
                       "apikey=",secret_hologram$apikey)
   req2 <- curl_fetch_memory(built_url)
+  # Deal with 500 server errors
+  if (!fromJSON(rawToChar(req2$content))$success){
+    print("Fetch failed")
+    next
+  }
   if (fromJSON(rawToChar(req2$content))$size==0){
+    print("No data")
     next
   }
   jreq2_tmp <- fromJSON(rawToChar(req2$content))$data
   x_jreq2 <- jreq2_tmp
   
   base_url <- "https://dashboard.hologram.io"
-  
   while (fromJSON(rawToChar(req2$content))$continues){
     print("Next 1000 fetch")
     built_url <- paste0(base_url,
                         fromJSON(rawToChar(req2$content))$links[3])
     req2 <- curl_fetch_memory(built_url)
+    while (req2$status_code == 500){
+      Sys.sleep(20)
+      req2 <- curl_fetch_memory(built_url)
+    }
     jreq2_tmp <- fromJSON(rawToChar(req2$content))$data
     x_jreq2 <- append(x_jreq2,fromJSON(rawToChar(req2$content))$data)
+    Sys.sleep(2)
+    
   }
   print(ndata <- length(x_jreq2))
   
@@ -215,8 +236,6 @@ proj4string_NZTM <- CRS('+init=epsg:2193')
 proj4string_latlon <- CRS('+init=epsg:4326')
 proj4string <- "+proj=tmerc +lat_0=0.0 +lon_0=173.0 +k=0.9996 +x_0=1600000.0 +y_0=10000000.0 +datum=WGS84 +units=m"
 
-odin_locations <- read_delim(paste0(data_path,"odin_locations.txt"),
-                             "\t", escape_double = FALSE, trim_ws = TRUE)
 curr_data <- data.frame(ODIN = unique(all_data$serialn))
 curr_data$lat <- NA
 curr_data$lon <- NA
@@ -354,7 +373,7 @@ RCurl::ftpUpload(paste0(data_path,
                         'all_data_',
                         format(min(all_data.tavg$date) + 12*3600,format = "%Y%m%d"),"_",
                         format(max(all_data.tavg$date) + 12*3600,format = "%Y%m%d"),
-                        ".tgz"))
+                        "_campaign.tgz"))
 RCurl::ftpUpload(paste0(data_path,
                         'all_dataAVG',
                         format(min(all_data.tavg$date) + 12*3600,format = "%Y%m%d"),"_",
@@ -364,7 +383,7 @@ RCurl::ftpUpload(paste0(data_path,
                         'all_dataAVG_',
                         format(min(all_data.tavg$date) + 12*3600,format = "%Y%m%d"),"_",
                         format(max(all_data.tavg$date) + 12*3600,format = "%Y%m%d"),
-                        ".tgz"))
+                        "_campaign.tgz"))
 
 
 
@@ -567,7 +586,7 @@ if (location_ok){
   # Upload files
   print("Upload NC files")
   RCurl::ftpUpload(paste0(data_path,"odin_idw.nc"),
-                   "ftp://ftp.niwa.co.nz/incoming/GustavoOlivares/odin_motueka/odin_idw.nc")
+                   "ftp://ftp.niwa.co.nz/incoming/GustavoOlivares/odin_motueka/odin_idw_1hr_all.nc")
 
 }
 
