@@ -1,0 +1,48 @@
+---
+title: "Compare PM10 and PM2.5 time series"
+output: html_notebook
+---
+```{r presetup,warning=FALSE}
+library(openair)
+library(readr)
+
+# Paths
+work_path <- path.expand("~/repositories/motueka2019-odin-analysis/mapping/")
+setwd(work_path)
+data_path <- path.expand("./")
+
+```
+
+Load the data 
+```{r}
+pm10.data <- read_delim(paste0(data_path,"data/long_PM10_10min.csv"),
+                        ",",
+                        escape_double = FALSE,
+                        trim_ws = TRUE,
+                        col_types = 'cTn')
+names(pm10.data) <- c('site','date','PM10')
+# Correct ID to point to serial number rather than site ID
+site2serial <- read_delim('./site_odin_key.txt',
+                          "\t")
+for (i in (1:length(site2serial$SiteID))) {
+  indx_id <- which(pm10.data$site == site2serial$SiteID[i])
+  pm10.data$site[indx_id] <- paste0('SD',site2serial$ODINSD[i])
+}
+pm2.5.data <- read_delim(paste0(data_path,"data/long_PM25_10min.csv"),
+                        ",",
+                        escape_double = FALSE,
+                        trim_ws = TRUE,
+                        col_types = 'cTn')
+names(pm2.5.data) <- c('site','date','PM2.5')
+```
+
+Now to join the data
+```{r}
+all.data <- merge(pm10.data,pm2.5.data,by=c('date','site'),all = TRUE)
+```
+
+And now some plots
+```{r}
+gplot <- ggplot(data = all.data)
+```
+
