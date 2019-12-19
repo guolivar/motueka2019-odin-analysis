@@ -1,0 +1,46 @@
+---
+title: "NZTM to Lat Lon"
+output: html_notebook
+---
+
+This is a notebook to have handy when needing to convert coordinates between different projections  
+
+First, load the required libraries
+```{r SetEnv}
+library(gstat)
+library(rgdal)
+library(readr)
+```
+Then, define some useful constants to make the projection easier
+```{r CRS constants}
+# As CRS types
+CRS_NZTM <- CRS('+init=epsg:2193')
+CRS_latlon <- CRS('+init=epsg:4326')
+CRS_NZMG <- CRS('+init=epsg:27200')
+# As strings
+proj4string_NZTM <- '+proj=tmerc +lat_0=0 +lon_0=173 +k=0.9996 +x_0=1600000 +y_0=10000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'
+proj4string_latlon <- '+proj=longlat +datum=WGS84 +no_defs'
+proj4string_NZMG <- '+proj=nzmg +lat_0=-41 +lon_0=173 +x_0=2510000 +y_0=6023150 +ellps=intl +towgs84=59.47,-5.04,187.44,0.47,-0.1,1.024,-4.5993 +units=m +no_defs'
+```
+
+Now, load the data with coordinates to convert
+```{r loadDATA}
+locations <- read_delim(path.expand('~/data/Motueka/ODIN/odin_locations_FULL.txt'),
+                             "\t",
+                             escape_double = FALSE,
+                             trim_ws = TRUE)
+```
+Finally, convert the original coordinates into whatever is needed.
+```{r reproject}
+for (i in (1:length(locations$ID))) {
+  p <- project(cbind(locations$X[i],locations$Y[i]),proj = proj4string,inv = TRUE)
+  locations$lat[i] <- p[2]
+  locations$lon[i] <- p[1]
+}
+```
+And now the table is ready to be prettified
+```{r display}
+print(locations)
+```
+
+
