@@ -5,9 +5,10 @@ output: html_notebook
 ```{r presetup,warning=FALSE}
 library(openair)
 library(readr)
+library(ggplot2)
 
 # Paths
-work_path <- path.expand("~/repositories/motueka2019-odin-analysis/mapping/")
+work_path <- path.expand("~/GUSrepos/motueka2019-odin-analysis/mapping/")
 setwd(work_path)
 data_path <- path.expand("./")
 
@@ -39,10 +40,34 @@ names(pm2.5.data) <- c('site','date','PM2.5')
 Now to join the data
 ```{r}
 all.data <- merge(pm10.data,pm2.5.data,by=c('date','site'),all = TRUE)
+# Only records with site defined
+all.data <- subset(all.data,!is.na(site))
 ```
 
 And now some plots
 ```{r}
-gplot <- ggplot(data = all.data)
+sites <- unique(all.data$site)
+gplots <- vector('list', length(sites))
+
+i <- 1
+for (csite in sites){
+  gplots[[i]] <- ggplot(data = subset(all.data,site == csite)) +
+    geom_point(aes(x=PM10,y=PM2.5)) +
+    geom_abline(slope = 1, intercept = 0)
+  i <- i + 1
+}
+multiplot(plotlist = gplots, cols=5)
+```
+
+Let's look at site 4, apparently unit 0037
+```{r}
+data_telemetry <- read_csv("/mnt/bigdisk/data/Motueka/ODIN_telemetry/all_dataAVG_20180612_20190902_campaign/all_dataAVG_20180612_20190902_campaign/all_dataAVG20180612_20190902.txt")
+```
+
+Plot scatter
+
+```{r}
+data.0037 <- subset(data_telemetry,serialn == 'ODIN-0037 (90051)')
+plot(data.0037$PM10,data.0037$PM2.5)
 ```
 
