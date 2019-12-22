@@ -7,7 +7,7 @@ library(openair)
 library(readr)
 
 # Paths
-work_path <- path.expand("~/repositories/motueka2019-odin-analysis/mapping/")
+work_path <- path.expand("~/repositories/motueka2019-odin-analysis/")
 setwd(work_path)
 data_path <- path.expand("./")
 

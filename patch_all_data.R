@@ -1,0 +1,6 @@
+rm(list = ls())
+print("Starting PM2.5")
+source('./patching_data_2nd_round_PM2.5.R')
+rm(list = ls())
+print("Starting PM10")
+source('./patching_data_2nd_round_PM10.R')
