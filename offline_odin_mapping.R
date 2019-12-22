@@ -16,35 +16,16 @@ library(ggplot2)
 library(sp)
 library(rgdal)
 
-# library(readr)
-# library(reshape2)
-# library(automap)
-# library(raster)
-# library(gstat)
-# library(ggmap)
-# library(scales)
-# library(gstat)
-# library(RNetCDF)
-# library(RJSONIO)
-# library(curl)
-# library(base64enc)
-# library(zoo)
-# library(openair)
-# library(stringi)
-# library(viridis)
-# library(dplyr)
-# library(RColorBrewer)
-# library(purrr)
-# library(magick)
+
 
 ##### Register google's mapping key
 register_google(key = "AIzaSyACi3pNvPQTxZWx5u0nTtke598dPqdgySg")
 
 ##### Load data ####
 ##### Set the working directory DB ####
-work_path <- path.expand("./mapping/")
-#setwd(work_path)
-data_path <- path.expand("~/data/Motueka/ODIN/")
+work_path <- path.expand("~/repositories/motueka2019-odin-analysis/mapping/")
+setwd(work_path)
+data_path <- path.expand("~/repositories/motueka2019-odin-analysis/data/")
 
 # Get the list of locations
 odin_locations <- read_delim(paste0(data_path,"odin_locations.txt"),
@@ -53,11 +34,22 @@ odin_locations <- read_delim(paste0(data_path,"odin_locations.txt"),
                              trim_ws = TRUE)
 
 # Get ODIN LONG dataset
-odin.1hr <- read_delim(paste0(data_path,"tdc_hourly_long.csv"),
-           ",",
-           escape_double = FALSE,
-           trim_ws = TRUE,
-           col_types = 'cTn')
+load("~/repositories/motueka2019-odin-analysis/patched.data.PM2.5.RData")
+patched.data.PM2.5 <- patched.data
+rm(patched.data)
+# Fix date
+patched.data.PM2.5$date <- as.POSIXct(patched.data.PM2.5$date,format = "%Y-%m-%d %H:%M:%S", tz='UTC')
+
+# Generate hourly dataset for each device
+devices <- unique(patched.data.PM2.5$site)
+for (device in devices){
+  c_data <- subset(patched.data.PM2.5, site == device)
+  if (!exists(odin.1hr)){
+    odin.1hr <- timeAverage(patched.data.PM2.5,avg.time = '1 hour')
+  } else{
+    odin.1hr <- rbind(odin.1hr,timeAverage(patched.data.PM2.5,avg.time = '1 hour'))
+  }
+}
 
 # Match location
 odin.1hr$X <- NA
